@@ -1,26 +1,35 @@
 package project.knn;
 
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.Comparator;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
+import java.util.Map.Entry;
 
 import project.brain.Brain;
 import project.brain.Point;
 
 public class KNN extends Brain {
-	
+	public static int op = 0;
+	public int hits = 0;
+
 	public static void main(String[] args) {
 		KNN knn = new KNN();
 		knn.init();
+		knn.knn(op);
+		knn.finish();
 	}
-	
+
 	public void init() {
-		int op = 0;
-		
+
 		System.out.println("Neural Network (K-Nearest Neighbors)");
 		System.out.println("-------------------------------------------\n");
-		points = loadDatabase(TRAIN);
-		newPoints = loadDatabase(TEST);
+		points = loadDatabase(TRAIN, "_iris", ",");
+		newPoints = loadDatabase(TEST, "_iris", ",");
 		System.out.println("\n");
-		
+
 		op = 0;
 		while (op < 1 || op > 3) {
 			System.out.println("Qual a distância que será utilizada?");
@@ -31,156 +40,164 @@ public class KNN extends Brain {
 			op = scanner.nextInt();
 			System.out.println("\n");
 		}
-		
+
 		System.out.print("Digite um valor para k entre 1 e 11 (Número ímpar): ");
 		k = scanner.nextInt();
+
+	}
+
+	public void knn(int distance) {
+		List<Point> amostras = new ArrayList<Point>();
+		int pow = 0;
+		if (distance == 3) {
+			System.out.print("Digite um valor para a potência que será aplicada na distâcia de Minkowski: ");
+			pow = scanner.nextInt();
+		}
 		
-		switch (op) {
-			case 1:
-				euclidian();
-				break;
-			case 2:
-				manhattan();
-				break;
-			case 3:
-				System.out.print("Digite um valor para a potência que será aplicada na distâcia de Minkowski: ");
-				int pow = scanner.nextInt();
-				minkowski(pow);
-				break;
-			default:
-				break;
-		}
-	}
-
-	public void euclidian() {
-		for (Point p1 : newPoints) {
-			List<Double> p = p1.getInput();
-			Point result = null;
-			double x = 0;
-
-			for (int index = 0; index < k; index++) {
-				List<Double> q = points.get(index).getInput();
-				
+		for (Point np1 : newPoints) {
+			List<Double> p = np1.getInput();
+			
+			for (Point p1 : points) {
+				List<Double> q = p1.getInput();
 				double y = 0;
-				for (int i = 0; i < p.size(); i++) {
-					double diff = p.get(i) - q.get(i);
-					y += Math.pow(diff, 2);
-				}
-				y = Math.sqrt(y);
 				
-				if (y > x){
-					x = y;
-					result = points.get(index);
-				}
+				if (distance == 1)					y = euclidian(p, q);
+				else if (distance == 2)				y = manhattan(p, q);
+				else								y = minkowski(pow, p, q);
+				
+				p1.setDistance(y);
 			}
 			
-			p1.printData();
-			System.out.println("Class: " + result.getKlass());
-		}
-	}
-	
-	public void manhattan() {
-		for (Point p1 : newPoints) {
-			List<Double> p = p1.getInput();
-			Point result = null;
-			double x = 0;
-
-			for (int index = 0; index < k; index++) {
-				List<Double> q = points.get(index).getInput();
-				
-				double y = 0;
-				for (int i = 0; i < p.size(); i++) {
-					y += Math.abs(p.get(i) - q.get(i));
-				}
-				
-				if (y > x){
-					x = y;
-					result = points.get(index);
-				}
+			// Current point distances
+			amostras.clear();
+			amostras.addAll(points);
+			sortPoint(amostras);
+			
+			np1.printData();
+			System.out.print(k + "-nn: ");
+			List<Integer> klasses = new ArrayList<Integer>();
+			for (int i = 0; i < k; i++) {
+				System.out.print(amostras.get(i).getKlass() + " ");
+				klasses.add(amostras.get(i).getKlass());
 			}
 			
-			p1.printData();
-			System.out.println("Class: " + result.getKlass());
+			int klass = calculateClass(klasses);
+			System.out.println("\tClass: " + klass);
+			np1.setGotKlass(klass);
+			
+			if (klass == np1.getKlass()) {
+				hits++;
+			}
 		}
-	}
-	
-	public void minkowski(int pow) {
-		for (Point p1 : newPoints) {
-			List<Double> p = p1.getInput();
-			Point result = null;
-			double x = 0;
 
-			for (int index = 0; index < k; index++) {
-				List<Double> q = points.get(index).getInput();
+	}
+
+	private int calculateClass(List<Integer> klasses) {
+		int result;
+		int count = 0, major = 0;
+		
+		// Check if hava any double repetead
+		result = klasses.get(0);
+		sortInteger(klasses);
+		for (int i = 0; i < klasses.size(); i++) {
+			for (int j = i+1; j < klasses.size(); j++) {
 				
-				double y = 0;
-				for (int i = 0; i < p.size(); i++) {
-					double diff = p.get(i) - q.get(i);
-					double number = Math.pow(diff, pow);
-					y += Math.abs(number);
+				if (klasses.get(i) == klasses.get(j)) {
+					count++;
 				}
-				y = Math.pow(y, 1.0/pow);
 				
-				if (y > x){
-					x = y;
-					result = points.get(index);
-				}
 			}
 			
-			p1.printData();
-			System.out.println("Class: " + result.getKlass());
+			if (count > major) {
+				major = count;
+				result = klasses.get(i);
+			}
+			count = 0;
 		}
+		
+		return result;
+	}
+
+	public double euclidian(List<Double> p, List<Double> q) {
+		double y = 0;
+		for (int i = 0; i < p.size(); i++) {
+			double diff = p.get(i) - q.get(i);
+			y += Math.pow(diff, 2);
+		}
+		y = Math.sqrt(y);
+
+		return y;
+	}
+
+	public double manhattan(List<Double> p, List<Double> q) {
+		double y = 0;
+		for (int i = 0; i < p.size(); i++) {
+			y += Math.abs(p.get(i) - q.get(i));
+		}
+
+		return y;
+	}
+
+	public double minkowski(int pow, List<Double> p, List<Double> q) {
+		double y = 0;
+		for (int i = 0; i < p.size(); i++) {
+			double diff = p.get(i) - q.get(i);
+			double number = Math.pow(diff, pow);
+			y += Math.abs(number);
+		}
+		y = Math.pow(y, 1.0 / pow);
+
+		return y;
+	}
+
+	public void sortDouble(List<Double> keys) {
+		Collections.sort(keys);
 	}
 	
-	public void sample() {
+	public void sortInteger(List<Integer> keys) {
+		Collections.sort(keys);
+	}
+	
+	public void sortPoint(List<Point> keys) {
+		Collections.sort(keys, new Comparator<Point>() {
 
-		double a1 = 5.1, a2 = 3.5, a3 = 1.4, a4 = 0.2;
-		double b1 = 4.9, b2 = 3.0, b3 = 1.4, b4 = 0.2;
-		double c1 = 4.7, c2 = 3.2, c3 = 1.3, c4 = 0.2;
-
-		double d1 = 6.9, d2 = 3.1, d3 = 4.9, d4 = 1.5;
-		double e1 = 5.5, e2 = 2.3, e3 = 4.0, e4 = 1.3;
-		double f1 = 6.5, f2 = 2.8, f3 = 4.6, f4 = 1.5;
-
-		double g1 = 6.7, g2 = 2.5, g3 = 5.8, g4 = 1.8;
-		double h1 = 7.2, h2 = 3.6, h3 = 6.1, h4 = 2.5;
-		double i1 = 6.5, i2 = 3.2, i3 = 5.1, i4 = 2.0;
-
-		double r01 = 6.8, r02 = 3.0, r03 = 5.5, r04 = 2.1;
-
-		System.out.println("Setosa");
-		double result = Math.sqrt(Math.pow(r01 - a1, 2) + Math.pow(r02 - a2, 2)
-				+ Math.pow(r03 - a3, 2) + Math.pow(r04 - a4, 2));
-		System.out.println(result);
-
-		result = Math.sqrt(Math.pow(r01 - b1, 2) + Math.pow(r02 - b2, 2)
-				+ Math.pow(r03 - b3, 2) + Math.pow(r04 - b4, 2));
-		System.out.println(result);
-		result = Math.sqrt(Math.pow(r01 - c1, 2) + Math.pow(r02 - c2, 2)
-				+ Math.pow(r03 - c3, 2) + Math.pow(r04 - c4, 2));
-		System.out.println(result);
-
-		System.out.println("\nVersicolour");
-		result = Math.sqrt(Math.pow(r01 - d1, 2) + Math.pow(r02 - d2, 2)
-				+ Math.pow(r03 - d3, 2) + Math.pow(r04 - d4, 2));
-		System.out.println(result);
-		result = Math.sqrt(Math.pow(r01 - e1, 2) + Math.pow(r02 - e2, 2)
-				+ Math.pow(r03 - e3, 2) + Math.pow(r04 - e4, 2));
-		System.out.println(result);
-		result = Math.sqrt(Math.pow(r01 - f1, 2) + Math.pow(r02 - f2, 2)
-				+ Math.pow(r03 - f3, 2) + Math.pow(r04 - f4, 2));
-		System.out.println(result);
-
-		System.out.println("\nVirginica");
-		result = Math.sqrt(Math.pow(r01 - g1, 2) + Math.pow(r02 - g2, 2)
-				+ Math.pow(r03 - g3, 2) + Math.pow(r04 - g4, 2));
-		System.out.println(result);
-		result = Math.sqrt(Math.pow(r01 - h1, 2) + Math.pow(r02 - h2, 2)
-				+ Math.pow(r03 - h3, 2) + Math.pow(r04 - h4, 2));
-		System.out.println(result);
-		result = Math.sqrt(Math.pow(r01 - i1, 2) + Math.pow(r02 - i2, 2)
-				+ Math.pow(r03 - i3, 2) + Math.pow(r04 - i4, 2));
-		System.out.println(result);
+			@Override
+			public int compare(Point o1, Point o2) {
+				return o1.getDistance().compareTo(o2.getDistance());
+			}
+			
+		});
 	}
 
+	public void finish() {
+		System.out.println("\n\n\n");
+		
+		System.out.println("Total de Amostras Analisadas: " + newPoints.size());
+		System.out.println("Total Acertos: " + hits);
+		
+		System.out.print("\n");
+		
+		/**
+		 * Check amount hits by class
+		 */
+		Map<Integer, Integer> map = new HashMap<Integer, Integer>();
+		for (int i = 0; i < newPoints.size() - 1; i++) {
+			int count = 0;
+			int klass = newPoints.get(i).getKlass();
+			int hitsk = newPoints.get(i).getGotKlass() == klass ? 1 : 0;
+			
+			if (map.containsKey(klass)) {
+				count = map.get(klass);
+				count += hitsk;
+			}
+			map.put(klass, count);
+		}
+		
+		for (Entry<Integer, Integer> entry : map.entrySet()) {
+			System.out.println("Classe: " + entry.getKey());
+			System.out.println("Acertos: " + entry.getValue());
+			System.out.println("Porcentagem: " + ((entry.getValue() * 100) / hits) + "%");
+			System.out.println();
+		}
+	}
 }

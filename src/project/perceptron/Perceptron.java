@@ -203,7 +203,7 @@ public class Perceptron {
 			for (int i = 0; i < neurons.size(); i++) {
 				Neuron x = neurons.get(i);
 				calculateOutput(x, i);
-				printStatus(x);
+				//printStatus(x);
 				
 				if (error != PERFECT) {
 					updateWeights(x.getInput());

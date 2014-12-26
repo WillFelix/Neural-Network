@@ -8,16 +8,22 @@ import project.brain.Point;
 
 public class KMeans extends Brain {
 	
+	public Group[] groups;
+	
+	public GraphingData paint = new GraphingData();
+	
 	public static void main(String[] args) {
 		KMeans kmeans = new KMeans();
 		kmeans.init();
+		kmeans.kmeans();
+		kmeans.finish();
 	}
 	
-	public void init() {
+	private void init() {
 		System.out.println("Neural Networks (K-Means)");
 		System.out.println("----------------------------------------\n");
 		
-		points = loadDatabase(TRAIN);
+		points = loadDatabase(TRAIN, "_kmeans", ";");
 		
 		do {
 			
@@ -26,7 +32,6 @@ public class KMeans extends Brain {
 			
 		} while (k < 2 || k > 3);
 		
-		kmeans();
 	}
 	
 	/**
@@ -36,25 +41,28 @@ public class KMeans extends Brain {
 	 * 3 - Generate a matrix of distance between each point and the centroids.
 	 * 4 - Go back the step 2 if the groups were modified.
 	 */
-	public void kmeans() {
+	private void kmeans() {
 		boolean newPartitions = true;
+		System.out.println();
 		
 		Group[] G = step1();
+		Group[] G2 = null;
 		
 		while (newPartitions) {
 			double[][] centroids = step2(G);
 			List<double[]> distMatrix = step3(centroids);
-			newPartitions = step4(G, distMatrix);
+			G2 = step4(G, distMatrix);
+			newPartitions = isDiferentGroups(G, G2);
 		}
 		
-		
+		groups = G2;
 	}
 	
 	/**
 	 * Step 1 - Partitions of objects in k groups not empty. 
 	 * @return
 	 */
-	public Group[] step1() {
+	private Group[] step1() {
 		Group[] G = new Group[k];
 		
 		int index = 0, gindex = 0, i = 0;
@@ -75,8 +83,9 @@ public class KMeans extends Brain {
 	/**
 	 * Step 2 - To define the centroids values of current partition group.  
 	 * @return
+	 * Para definir o centroid deve-se tirar a média de todos as entradas de cada caracteristica 
 	 */
-	public double[][] step2(Group[] G) {
+	private double[][] step2(Group[] G) {
 		double[][] centroideG = new double[k][points.get(0).getInput().size()];
 		
 		// Iterando sobre os groups G
@@ -105,7 +114,7 @@ public class KMeans extends Brain {
 	 * Step 3 - Generate a matrix of distance between each point and the centroids.
 	 * @return
 	 */
-	public List<double[]> step3(double[][] centroids) {
+	private List<double[]> step3(double[][] centroids) {
 		List<double[]> res = new ArrayList<double[]>();
 		
 		// sqrt((1.83 − 1.0)² + (2.33 − 1.0)²)
@@ -126,8 +135,7 @@ public class KMeans extends Brain {
 	 * Step 4 - Go back the step 2 if the groups were modified.
 	 * @return
 	 */
-	public boolean step4(Group[] G, List<double[]> distMatrix) {
-		boolean result = true;
+	private Group[] step4(Group[] G, List<double[]> distMatrix) {
 		int size = distMatrix.get(0).length;
 		Group[] G2 = new Group[G.length];
 		
@@ -157,13 +165,11 @@ public class KMeans extends Brain {
 				
 		}
 		
-		result = isDiferentGroups(G, G2);
-		
-		return result;
+		return G2;
 	}
 	
 	
-	public double[] dist(double[] cent, List<Point> points) {
+	private double[] dist(double[] cent, List<Point> points) {
 		int index = 0;
 		double[] result = new double[points.size()];
 		
@@ -187,23 +193,34 @@ public class KMeans extends Brain {
 		// Check groups amount between the two big groups
 		if (originalGroup.length != newGroup.length) {
 			return true;
-		} else {
+		}
+		
+		return false;
+	}
+
+	
+	private void finish() {
+		for (int i = 0; i < groups.length; i++) {
+			System.out.print("Group " + (i+1) + ": ");
 			
-			for (int i = 0; i < newGroup.length; i++) {
-				System.out.print("Group " + (i+1) + ": ");
-				
-				for (int j = 0; j < newGroup[i].getPoints().size(); j++) {
-					List<Point> points = newGroup[i].getPoints();
-					System.out.print(points.get(j).getKlass() + " ");
-				}
-				
-				System.out.println();
+			for (int j = 0; j < groups[i].getPoints().size(); j++) {
+				List<Point> points = groups[i].getPoints();
+				System.out.print(points.get(j).getInput() + " ");
 			}
 			
-			return false;
+			System.out.println();
 		}
+		
+		System.out.println();
+		for (int i = 0; i < groups.length; i++) {
+			System.out.println("Group[" + i + "] size: " + groups[i].getPoints().size());
+			paint.addData(groups[i].getPoints());
+		}
+		
+		
+		paint.start();
+
 	}
-	
 	
 	public void inputSample() {
 		points = new ArrayList<Point>();
@@ -250,4 +267,5 @@ public class KMeans extends Brain {
 		p7.getInput().add(4.5);
 		points.add(p7);
 	}
+
 }
