@@ -87,7 +87,7 @@ public class KNN extends Brain {
 			
 			if (klass == np1.getKlass()) {
 				hits++;
-			}
+			}	
 		}
 
 	}
