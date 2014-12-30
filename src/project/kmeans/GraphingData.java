@@ -8,6 +8,7 @@ import java.awt.Toolkit;
 import java.awt.geom.Ellipse2D;
 import java.awt.geom.Line2D;
 import java.awt.geom.Rectangle2D;
+import java.text.DecimalFormat;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -23,6 +24,7 @@ public class GraphingData extends JPanel {
 	private Map< List<Point>, Color > groups = new LinkedHashMap< List<Point>, Color >();
 	private final int PAD = 10;
 	private int n = 0, var = 100, index = 0;
+	private DecimalFormat df = new DecimalFormat("#.##");
 	private final Color[] colors = {Color.blue, Color.red, Color.green};
 
 	protected void paintComponent(Graphics g) {
@@ -33,15 +35,14 @@ public class GraphingData extends JPanel {
 		int w = getWidth();
 		int h = getHeight();
 		
-		g2.draw(new Line2D.Double(PAD, PAD, PAD, h - PAD));					// Draw ordinate
-		g2.draw(new Line2D.Double(PAD, h - PAD, w - PAD, h - PAD));			// Draw abcissa
 		
+		// Data
 		for (Entry< List<Point>, Color > entry : groups.entrySet()) {
-			Color color = entry.getValue();
-			g2.setPaint(color);
-			
 			List<Point> points = entry.getKey();
+			Color color = entry.getValue();
+			
 			for (Point p : points) {
+				g2.setPaint(color);
 				double x = (p.getInput().get(0) * 130) + 350;
 				double y = p.getInput().get(1) * 130;
 				
@@ -49,9 +50,23 @@ public class GraphingData extends JPanel {
 			}
 			
 			g2.draw(new Rectangle2D.Double(w - 100, h - var, 5, 5));
-			g2.drawString("Group " + index, w - 90, h - (var - 7));
+			g2.drawString("Group " + index, w - 90, h - (var - 70));
 			var -= 15;
 			index++;
+		}
+		
+		// Legends and Numbers
+		g2.setPaint(Color.black);
+		g2.draw(new Line2D.Double(PAD, PAD, PAD, h - PAD));					// Draw ordinate
+		g2.draw(new Line2D.Double(PAD, h - PAD, w - PAD, h - PAD));			// Draw abcissa
+		
+		g2.setPaint(Color.darkGray);
+		for (int i = 20; i < h - PAD; i+=20) {
+			g2.drawString(df.format(i), PAD + 10, getHeight() - i);
+		}
+		g2.setPaint(Color.red);
+		for (int i = 20; i < w - PAD; i+=100) {
+			g2.drawString(df.format(i), i, h - PAD);
 		}
 		
 	}
