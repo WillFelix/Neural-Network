@@ -23,7 +23,7 @@ import project.brain.Point;
 public class GraphingData extends JPanel {
 	private Map< List<Point>, Color > groups = new LinkedHashMap< List<Point>, Color >();
 	private final int PAD = 10;
-	private int n = 0, var = 100, index = 0;
+	private int n = 0, var = 300;
 	private DecimalFormat df = new DecimalFormat("#.##");
 	private final Color[] colors = {Color.blue, Color.red, Color.green};
 
@@ -49,10 +49,6 @@ public class GraphingData extends JPanel {
 				g2.fill(new Ellipse2D.Double(x, y, 5, 5));
 			}
 			
-			g2.draw(new Rectangle2D.Double(w - 100, h - var, 5, 5));
-			g2.drawString("Group " + index, w - 90, h - (var - 70));
-			var -= 15;
-			index++;
 		}
 		
 		// Legends and Numbers
@@ -67,6 +63,18 @@ public class GraphingData extends JPanel {
 		g2.setPaint(Color.red);
 		for (int i = 20; i < w - PAD; i+=100) {
 			g2.drawString(df.format(i), i, h - PAD);
+		}
+		
+		int i = 1;
+		for (Entry< List<Point>, Color > entry : groups.entrySet()) {
+			Color color = entry.getValue();
+			
+			g2.setColor(color);
+			g2.draw(new Rectangle2D.Double(w - 100, h - var, 5, 5));
+			g2.drawString("Group " + i, w - 90, h - (var - 10));
+			
+			i++;
+			var -= 15;
 		}
 		
 	}
