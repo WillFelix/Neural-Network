@@ -3,16 +3,14 @@ package project.ga;
 public class Queen {
 	private int row;
 	private int col;
-	private int nextQueens;
+	private int targets;
 
-	
 	public Queen(int row, int col) {
 		this.row = row;
 		this.col = col;
-		this.nextQueens = -1;
+		this.targets = -1;
 	}
 
-	
 	public int getRow() {
 		return row;
 	}
@@ -29,12 +27,12 @@ public class Queen {
 		this.col = col;
 	}
 
-	public int getNextQueens() {
-		return nextQueens;
+	public int getTargets() {
+		return targets;
 	}
 
-	public void setNextQueens(int nextQueens) {
-		this.nextQueens = nextQueens;
+	public void setTargets(int targets) {
+		this.targets = targets;
 	}
 
 }

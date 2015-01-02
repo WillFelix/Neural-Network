@@ -3,136 +3,140 @@ package project.ga;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Random;
-import java.util.Scanner;
 
 public class GeneticAlgorithm {
+	private static int MUTATION_QUANTITY = 0;
 	private static final int QUEEN = 1;
-	private static final int NUMBER_OF_QUEENS = 8;
+	private static final int CHROMO_SIZE = 24;
 	private static final int MUTATION_NUMBER = 45;
+	private static final int NUMBER_OF_QUEENS = 8;
+	private static final int QUANTITY_POPULATION_GENERATE = 4;
 	private static final Random random = new Random();
 
-	private int[] subjects;
-	private static int MUTATION_QUANTITY = 0;
 	private int[][] chessboard = new int[8][8];
-	private List<Queen> queens = new ArrayList<Queen>();
-	
-	
+	private Chessboard board = new Chessboard();
+	private List<Chessboard> population = new ArrayList<Chessboard>();
+
 	public static void main(String[] args) {
 		GeneticAlgorithm ga = new GeneticAlgorithm();
 		ga.init();
 		ga.darwin();
 	}
-	
-	
+
 	private void init() {
-		Scanner scanner = new Scanner(System.in);
-		
 		System.out.println("Neural Network (Genetic Algorithm)");
 		System.out.println("-------------------------------------------\n");
 
-		subjects = new int[NUMBER_OF_QUEENS];
 		
 		// Half of a population is generated of a random way
-		for (int i = 0; i < NUMBER_OF_QUEENS / 2; i++) {
-			subjects[i] = new Random().nextInt(NUMBER_OF_QUEENS);
-			queens.add(new Queen(subjects[i], i));
-			chessboard[subjects[i]][i] = QUEEN;
+		for (int index = 0; index < QUANTITY_POPULATION_GENERATE / 2; index++) {
+			
+			Chessboard board = new Chessboard();
+			
+			for (int i = 0; i < NUMBER_OF_QUEENS; i++) {
+				int subject = new Random().nextInt(NUMBER_OF_QUEENS);
+				Queen q = new Queen(subject, i);
+				board.addQueen(q);
+			}
+			
+			population.add(board);
+			
 		}
 		
 		// The other half I reverse the bits
-		for (int i = NUMBER_OF_QUEENS / 2, j = 0; i < NUMBER_OF_QUEENS; i++, j++) {
-			int subject = queens.get(j).getRow();
-			int[] bits = intToBit(subject);
-			int[] reverseBits = new int[bits.length];
-			for (int k = 0; k < reverseBits.length; k++) {
-				reverseBits[k] = bits[k] == 0 ? 1 : 0;
+		for (int index = 0; index < QUANTITY_POPULATION_GENERATE / 2; index++) {
+			
+			Chessboard board = new Chessboard();
+			
+			for (int i = 0; i < NUMBER_OF_QUEENS; i++) {
+				List<Queen> queens = population.get(index).getQueens();
+				int subject = queens.get(index).getRow();
+				int[] bits = intToBit(subject);
+				int[] reverseBits = new int[bits.length];
+				for (int k = 0; k < reverseBits.length; k++) {
+					reverseBits[k] = bits[k] == 0 ? 1 : 0;
+				}
+	
+				subject = bitToInt(reverseBits);
+				Queen q = new Queen(subject, i);
+				board.addQueen(q);
 			}
 			
-			subject = bitToInt(reverseBits);
-			queens.add(new Queen(subject, i));
-			chessboard[subject][i] = QUEEN;
+			population.add(board);
+			
 		}
-		
+
 		System.out.println("Tabuleiro Inicial:");
+		board = population.get(0);
+		updateChessboard();
 		print(chessboard);
-		
-		scanner.close();
 	}
-	
+
 	private void darwin() {
 		int cycles = 0;
 		boolean goal = false;
-		
+
 		while (!goal) {
 			goal = checkGoal();
-			
+
 			if (!goal) {
 				generateKids();
-				updateChessboard();
 			}
-			
+
 			cycles++;
 		}
-		
+
 		System.out.println("Tabuleiro Final: ");
+		updateChessboard();
 		print(chessboard);
-		System.out.println("Finalizado com " + cycles + " iterações.\nQuantidade de Mutações: " + MUTATION_QUANTITY);
+		System.out.println("Finalizado com " + cycles + " iterações.");
+		System.out.println("Quantidade de Mutações: " + MUTATION_QUANTITY);
 	}
-	
+
 	private void generateKids() {
 		int i = 0;
-		List<Queen> kids = new ArrayList<Queen>();
-		
+		List<Chessboard> kids = new ArrayList<Chessboard>();
+
 		// CrossOver (Each crossover makes 2 kids)
-		while (i < 2) {
-			Queen father = queens.get( random.nextInt(queens.size()) );
-			Queen mother = queens.get( random.nextInt(queens.size()) );
-			kids.addAll( crossOver(father, mother) );
-			
+		while (i < QUANTITY_POPULATION_GENERATE / 2) {
+			Chessboard father = population.get(random.nextInt(population.size()));
+			Chessboard mother = population.get(random.nextInt(population.size()));
+			kids.addAll(crossOver(father, mother));
+
 			i++;
 		}
-		
-		// Mutação
+
+		// Mutation
 		int luckNumber = random.nextInt(100);
 		if (luckNumber == MUTATION_NUMBER) {
-			
-			i = random.nextInt( kids.size() );
-			Queen junior = kids.get(i);
-			kids.set(i, xmen(junior));
-			
+			i = random.nextInt(kids.size());
+			Chessboard junior = kids.get(i);
+			kids.set(i, mutation(junior));
+
 			GeneticAlgorithm.MUTATION_QUANTITY++;
 		}
-		
+
 		// Changing the queens by the newbies
-		for (i = 0;  i < queens.size(); i++) {
-			for (Queen kid : kids) {
-				
-				if (queens.get(i).getCol() == kid.getCol()) {
-					queens.set(i, kid);
-				}
-				
-			}
-		}
-		
-		
+		population.clear();
+		population.addAll(kids);
 	}
-	
+
 	private void updateChessboard() {
-		
+
 		for (int i = 0; i < chessboard.length; i++) {
 			for (int j = 0; j < chessboard[0].length; j++) {
 				chessboard[i][j] = 0;
 			}
 		}
 		
-		for (int i = 0; i < queens.size(); i++) {
-			int row = queens.get(i).getRow();
-			int col = queens.get(i).getCol();
+		for (int i = 0; i < board.getQueens().size(); i++) {
+			int row = board.getQueens().get(i).getRow();
+			int col = board.getQueens().get(i).getCol();
 			chessboard[row][col] = QUEEN;
 		}
-		
+
 	}
-	
+
 	private void print(int[][] matrix) {
 		System.out.println("\n");
 		for (int i = 0; i < matrix.length; i++) {
@@ -143,119 +147,88 @@ public class GeneticAlgorithm {
 		}
 		System.out.println("\n");
 	}
-	
-	private List<Queen> crossOver(Queen father, Queen mother) {
-		int male, female, temp;
-		int[] maleBit, femaleBit;
-		int pointCut = random.nextInt(3);
-		ArrayList<Queen> kids = new ArrayList<Queen>();
 
-		maleBit = intToBit( father.getRow() );
-		femaleBit = intToBit( mother.getRow() );
-
-		for (int i = pointCut; i < 3; i++) {
-			temp = maleBit[i];
-			maleBit[i] = femaleBit[i];
-			femaleBit[i] = temp;
+	private List<Chessboard> crossOver(Chessboard father, Chessboard mother) {
+		int[] chromoX, chromoY;
+		int temp, pointCut = random.nextInt(CHROMO_SIZE);
+		
+		Chessboard male, female;
+		List<Chessboard> kids = new ArrayList<Chessboard>();
+		
+		chromoX = generateChromosomes(father.getRowQueens());
+		chromoY = generateChromosomes(mother.getRowQueens());
+		for (int i = pointCut; i < CHROMO_SIZE; i++) {
+			temp = chromoX[i];
+			chromoX[i] = chromoY[i];
+			chromoY[i] = temp;
 		}
+
+		male = generateChessboardByChromosome(chromoX);
+		female = generateChessboardByChromosome(chromoY);
 		
-		male = bitToInt(maleBit);
-		female = bitToInt(femaleBit);
-		
-		father.setRow(male);
-		mother.setRow(female);
-		
-		kids.add(father);
-		kids.add(mother);
-		
+		kids.add(male);
+		kids.add(female);
+
 		return kids;
 	}
-
-	private Queen xmen(Queen junior) {
-		int row = junior.getRow();
-		int[] bit = intToBit(junior.getRow());
-		int hotspot = random.nextInt( bit.length );
-		
-		bit[hotspot] = bit[hotspot] == 0 ? 1 : 0;
-		
-		row = bitToInt(bit);
-		junior.setRow(row);
-		
-		return junior;
-	}
 	
-	private int lookAroundForEnemies(Queen queen, int r, int c) {
-		int row = queen.getRow();
-		int col = queen.getCol();
-		int enemiesAmount = 0;
-
-		for (int i = 0; i < chessboard.length; i++) {
-			// Horizontal
-			if (chessboard[row][i] == QUEEN && (i != c)) {
-				enemiesAmount++;
-			}
-
-			// Vertical
-			if (chessboard[i][col] == QUEEN && (i != r)) {
-				enemiesAmount++;
-			}
-		}
-
-		// Diagonal
-		// Down Right
-		for (int i = row, j = col; i < chessboard.length && j < chessboard.length; i++, j++) {
-			if (chessboard[i][j] == QUEEN && (i != r && j != c)) {
-				enemiesAmount++;
+	private int[] generateChromosomes(int[] bits) {
+		int index = 0;
+		int[] result = new int[CHROMO_SIZE];
+		
+		for (int i = 0; i < bits.length; i++) {
+			int[] bit = intToBit(bits[i]);
+			
+			for (int j = 0; j < bit.length; j++) {
+				if (index >= 24) {
+					System.out.println("AQUI");
+				}
+				result[index] = bit[j];
+				index++;
 			}
 		}
+		
+		return result;
+	}
 
-		// Down Left
-		for (int i = row, j = col; i < chessboard.length && j >= 0; i++, j--) {
-			if (chessboard[i][j] == QUEEN && (i != r && j != c)) {
-				enemiesAmount++;
-			}
+	private Chessboard generateChessboardByChromosome(int[] bits) {
+		Chessboard chessboard = new Chessboard();
+		
+		for (int i = 0, index = 0; i < bits.length; i += 3, index++) {
+			int[] bit = {bits[i], bits[i+1], bits[i+2]};
+			int row = bitToInt(bit);
+			chessboard.addQueen(new Queen(row, index));
 		}
+		
+		return chessboard;
+	}
 
-		// Up Right
-		for (int i = row, j = col; i >= 0 && j < chessboard.length; i--, j++) {
-			if (chessboard[i][j] == QUEEN && (i != r && j != c)) {
-				enemiesAmount++;
-			}
-		}
+	private Chessboard mutation(Chessboard junior) {
+		int numberQueen = random.nextInt(junior.getQueens().size());
+		Queen q = junior.getQueens().get(numberQueen);
+		
+		int row = q.getRow();
+		int[] bit = intToBit(q.getRow());
+		int hotspot = random.nextInt(bit.length);
 
-		// Up Left
-		for (int i = row, j = col; i >= 0 && j >= 0; i--, j--) {
-			if (chessboard[i][j] == QUEEN && (i != r && j != c)) {
-				enemiesAmount++;
-			}
-		}
+		bit[hotspot] = bit[hotspot] == 0 ? 1 : 0;
+		row = bitToInt(bit);
+		q.setRow(row);
+		
+		junior.getQueens().set(numberQueen, q);
 
-		queen.setNextQueens(enemiesAmount);
-		return enemiesAmount;
-
+		return junior;
 	}
 
 	private boolean checkGoal() {
-		boolean NO_ENEMIES = true;
-		int allRight = 0;
-		
-		for (Queen q : queens) {
-			if (analyseCurrentPosition(q) == NO_ENEMIES)
-				allRight++;
+		for (Chessboard p : population) {
+			if (p.observeEnemies() == 0){
+				board = p;
+				return true;
+			}
 		}
-		
-		if (allRight == NUMBER_OF_QUEENS)
-			return true;
-		
+
 		return false;
-	}
-
-	private boolean analyseCurrentPosition(Queen q) {
-		int i = lookAroundForEnemies(q, q.getRow(), q.getCol());
-		if (i > 0)
-			return false;
-
-		return true;
 	}
 
 	private int[] intToBit(int integer) {

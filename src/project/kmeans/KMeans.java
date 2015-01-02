@@ -1,6 +1,7 @@
 package project.kmeans;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 
 import project.brain.Brain;
@@ -9,6 +10,8 @@ import project.brain.Point;
 public class KMeans extends Brain {
 	
 	public Group[] groups;
+	
+	public int itMax = 0;
 	
 	public GraphingData paint = new GraphingData();
 	
@@ -48,11 +51,13 @@ public class KMeans extends Brain {
 		Group[] G = step1();
 		Group[] G2 = null;
 		
-		while (newPartitions) {
+		while (newPartitions && itMax <= 100) {
 			double[][] centroids = step2(G);
 			List<double[]> distMatrix = step3(centroids);
 			G2 = step4(G, distMatrix);
-			newPartitions = isDiferentGroups(G, G2);
+			newPartitions = isDiferentGroups(centroids, step2(G2));
+			
+			itMax++;
 		}
 		
 		groups = G2;
@@ -65,17 +70,39 @@ public class KMeans extends Brain {
 	private Group[] step1() {
 		Group[] G = new Group[k];
 		
-		int index = 0, gindex = 0, i = 0;
-		int groupSize = points.size() / k;
-		while (index < points.size()) {
-			if (G[gindex] == null)
-				G[gindex] = new Group(i++);
-			
-			G[gindex].add(points.get(index));
-			index++;
-			
-			if (index % groupSize == 0 && index + 1 < points.size()) gindex++;
+//		int index = 0, gindex = 0, i = 0;
+//		int groupSize = points.size() / k;
+//		while (index < points.size()) {
+//			if (G[gindex] == null)
+//				G[gindex] = new Group(i++);
+//			
+//			G[gindex].add(points.get(index));
+//			index++;
+//			
+//			if (index % groupSize == 0 && index + 1 < points.size()) gindex++;
+//		}
+		
+		for (int i = 0; i < k; i++) {
+			G[i] = new Group(i++);
 		}
+		
+		Point p = new Point();
+		p.setInput(Arrays.asList(1.9826, 0.5612));
+		p.setKlass(1);
+		G[0] = new Group(1);
+		G[0].add(p);
+		
+		Point p1 = new Point();
+		p1.setInput(Arrays.asList(0.9935,-0.4157));
+		p1.setKlass(1);
+		G[1] = new Group(2);
+		G[1].add(p1);
+		
+//		Point p2 = new Point();
+//		p2.setInput(Arrays.asList(-2.1958,-1.5015));
+//		p2.setKlass(1);
+//		G[2] = new Group(3);
+//		G[2].add(p2);
 		
 		return G;
 	}
@@ -101,7 +128,6 @@ public class KMeans extends Brain {
 						sum += p.getInput().get(j);
 					}
 					centroideG[i][j] = (sum / g.getPoints().size());
-				
 				}
 				
 			}
@@ -192,11 +218,18 @@ public class KMeans extends Brain {
 	}
 	
 	
-	private boolean isDiferentGroups(Group[] originalGroup, Group[] newGroup) {
+	private boolean isDiferentGroups(double[][] centOriginalGroup, double[][] centNewGroup) {
 		// Check groups amount between the two big groups
-		if (originalGroup.length != newGroup.length) {
-			return true;
+		for (int i = 0; i < k; i++) {
+			for (int j = 0; j < centNewGroup.length; j++) {
+				
+				if (centOriginalGroup[i][j] != centNewGroup[i][j]) {
+					return true;
+				}
+				
+			}
 		}
+		
 		
 		return false;
 	}
@@ -220,7 +253,7 @@ public class KMeans extends Brain {
 			paint.addData(groups[i].getPoints());
 		}
 		
-		
+		System.out.println("Numero de Iterações: " + itMax);
 		paint.start();
 
 	}
